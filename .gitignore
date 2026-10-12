@@ -1,2 +1,13 @@
 .cursor/
 .DS_Store
+
+# .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.rsuser
+*.userosscache
+*.binlog
+TestResults/
