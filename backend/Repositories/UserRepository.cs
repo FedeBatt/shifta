@@ -68,6 +68,37 @@ public class UserRepository(AppDbContext db) : IUserRepository
         return Map(user);
     }
 
+    public async Task<UserResponse?> UpdateAsyncAsNoTracking(int id, UpdateUserDto data)
+    {
+        // 1. Traemos el usuario SIN tracking (sin copia en memoria)
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id);
+        if (user is null)
+        {
+            return null;
+        }
+
+        // 2. Modificamos el objeto en memoria RAM
+        if (data.FirstName is not null) user.FirstName = data.FirstName;
+        if (data.LastName is not null) user.LastName = data.LastName;
+        if (data.Email is not null) user.Email = data.Email;
+        if (data.Password is not null) user.Password = data.Password;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // 3. ¡PASO CRUCIAL! Adjuntamos el objeto al contexto manualmente
+        var entry = db.Users.Attach(user);
+
+        // 4. Le avisamos a EF Core qué propiedades específicas fueron modificadas
+        if (data.FirstName is not null) entry.Property(x => x.FirstName).IsModified = true;
+        if (data.LastName is not null) entry.Property(x => x.LastName).IsModified = true;
+        if (data.Email is not null) entry.Property(x => x.Email).IsModified = true;
+        if (data.Password is not null) entry.Property(x => x.Password).IsModified = true;
+        entry.Property(x => x.UpdatedAt).IsModified = true;
+
+        // 5. Ahora SaveChanges() sí sabe qué enviar a la base de datos
+        await db.SaveChangesAsync();
+        return Map(user);
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         var deleted = await db.Users.Where(user => user.Id == id).ExecuteDeleteAsync();
